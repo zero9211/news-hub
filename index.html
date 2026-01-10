@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>全球热点新闻聚合</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/remixicon@3.5.0/fonts/remixicon.css" rel="stylesheet">
+    <style>
+        .loading-spinner {
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #3498db;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .news-card {
+            transition: all 0.3s ease;
+        }
+        .news-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+        }
+        .platform-badge {
+            display: inline-block;
+            padding: 0.25rem 0.75rem;
+            border-radius: 9999px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+        .twitter-badge { background-color: #1DA1F2; color: white; }
+        .tiktok-badge { background-color: #000000; color: white; }
+        .weibo-badge { background-color: #E6162D; color: white; }
+        .reddit-badge { background-color: #FF4500; color: white; }
+        .youtube-badge { background-color: #FF0000; color: white; }
+    </style>
+</head>
+<body class="bg-gray-50">
+    <!-- Header -->
+    <header class="bg-white shadow-sm border-b">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between items-center h-16">
+                <div class="flex items-center">
+                    <i class="ri-newspaper-line text-2xl text-blue-600 mr-3"></i>
+                    <h1 class="text-xl font-bold text-gray-900">全球热点新闻聚合</h1>
+                </div>
+                <div class="flex items-center space-x-4">
+                    <span id="lastUpdate" class="text-sm text-gray-500"></span>
+                    <button onclick="refreshNews()" class="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 transition">
+                        <i class="ri-refresh-line mr-1"></i>刷新
+                    </button>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <!-- Loading Spinner -->
+        <div id="loading" class="flex justify-center items-center py-12">
+            <div class="loading-spinner"></div>
+        </div>
+
+        <!-- News Container -->
+        <div id="newsContainer" class="hidden">
+            <!-- Platform Sections -->
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                <!-- Twitter/X Section -->
+                <div class="bg-white rounded-lg shadow-md p-6">
+                    <div class="flex items-center mb-4">
+                        <i class="ri-twitter-x-line text-2xl mr-2"></i>
+                        <h2 class="text-lg font-semibold">X (Twitter) 热点</h2>
+                    </div>
+                    <div id="twitterNews" class="space-y-3"></div>
+                </div>
+
+                <!-- TikTok Section -->
+                <div class="bg-white rounded-lg shadow-md p-6">
+                    <div class="flex items-center mb-4">
+                        <i class="ri-tiktok-line text-2xl mr-2"></i>
+                        <h2 class="text-lg font-semibold">TikTok 热点</h2>
+                    </div>
+                    <div id="tiktokNews" class="space-y-3"></div>
+                </div>
+
+                <!-- Weibo Section -->
+                <div class="bg-white rounded-lg shadow-md p-6">
+                    <div class="flex items-center mb-4">
+                        <i class="ri-weibo-line text-2xl mr-2"></i>
+                        <h2 class="text-lg font-semibold">微博热点</h2>
+                    </div>
+                    <div id="weiboNews" class="space-y-3"></div>
+                </div>
+
+                <!-- Reddit Section -->
+                <div class="bg-white rounded-lg shadow-md p-6">
+                    <div class="flex items-center mb-4">
+                        <i class="ri-reddit-line text-2xl mr-2"></i>
+                        <h2 class="text-lg font-semibold">Reddit 热点</h2>
+                    </div>
+                    <div id="redditNews" class="space-y-3"></div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Footer -->
+    <footer class="bg-white border-t mt-12">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+            <div class="text-center text-gray-500 text-sm">
+                <p>📰 全球热点新闻聚合 - 每日自动更新各大平台热点内容</p>
+                <p class="mt-2">数据来源：X/Twitter, TikTok, 微博, Reddit 等</p>
+            </div>
+        </div>
+    </footer>
+
+    <script src="js/news-manager.js"></script>
+</body>
+</html>

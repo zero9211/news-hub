@@ -1,0 +1,41 @@
+# 网站标题
+title = "全球热点新闻聚合"
+# 网站描述
+description = "实时聚合X、TikTok、微博、Reddit等平台热点新闻"
+# 作者
+author = "News Hub"
+# 网站URL
+baseURL = "https://yourusername.github.io/news-hub"
+# 语言
+languageCode = "zh-cn"
+# 主题
+theme = "custom"
+
+# 参数配置
+[params]
+  # 网站关键词
+  keywords = ["新闻", "热点", "Twitter", "TikTok", "微博", "Reddit"]
+  # 更新频率（小时）
+  updateInterval = 1
+  # 每个平台显示的新闻数量
+  newsCount = 10
+  # 是否启用自动刷新
+  autoRefresh = true
+  # 自动刷新间隔（分钟）
+  refreshInterval = 30
+
+# 社交媒体链接
+[[params.social]]
+  name = "GitHub"
+  url = "https://github.com/yourusername/news-hub"
+
+# 菜单配置
+[menu]
+  [[menu.main]]
+    name = "首页"
+    url = "/"
+    weight = 10
+  [[menu.main]]
+    name = "关于"
+    url = "/about/"
+    weight = 20
