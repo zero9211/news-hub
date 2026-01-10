@@ -39,7 +39,6 @@
         .tiktok-badge { background-color: #000000; color: white; }
         .weibo-badge { background-color: #E6162D; color: white; }
         .reddit-badge { background-color: #FF4500; color: white; }
-        .youtube-badge { background-color: #FF0000; color: white; }
     </style>
 </head>
 <body class="bg-gray-50">
@@ -121,6 +120,273 @@
         </div>
     </footer>
 
-    <script src="js/news-manager.js"></script>
+    <script>
+        // 新闻数据管理器
+        class NewsManager {
+            constructor() {
+                this.platforms = {
+                    twitter: 'X (Twitter)',
+                    tiktok: 'TikTok',
+                    weibo: '微博',
+                    reddit: 'Reddit'
+                };
+            }
+
+            // 模拟获取Twitter数据
+            async getTwitterNews() {
+                const topics = [
+                    'Breaking: Major tech announcement today',
+                    'Climate summit reaches historic agreement',
+                    'New AI breakthrough announced',
+                    'Global markets react to policy changes',
+                    'Sports championship finals tonight'
+                ];
+                
+                const topicsZh = [
+                    '突发：重大科技公告今日发布',
+                    '气候峰会达成历史性协议',
+                    '新AI突破宣布',
+                    '全球市场对政策变化作出反应',
+                    '体育锦标赛决赛今晚举行'
+                ];
+
+                return topics.map((title, index) => ({
+                    title: title,
+                    titleZh: topicsZh[index],
+                    engagement: Math.floor(Math.random() * 200 + 50) + 'K',
+                    time: Math.floor(Math.random() * 6 + 1) + '小时前',
+                    url: `https://twitter.com/trending/${index + 1}`,
+                    platform: 'twitter'
+                }));
+            }
+
+            // 模拟获取TikTok数据
+            async getTiktokNews() {
+                const trends = [
+                    'Viral dance challenge sweeps the nation',
+                    'New food trend everyone\'s trying',
+                    'Comedy sketch breaks the internet',
+                    'DIY life hack goes viral',
+                    'Pet video melts hearts globally',
+                    'Fashion trend takes over social media',
+                    'Travel destination becomes overnight sensation',
+                    'Fitness challenge inspires millions',
+                    'Cooking tutorial breaks records',
+                    'Tech review goes viral'
+                ];
+                
+                const trendsZh = [
+                    '病毒式舞蹈挑战席卷全国',
+                    '人人都在尝试的新美食趋势',
+                    '喜剧小品打破网络',
+                    'DIY生活技巧走红',
+                    '宠物视频温暖全球人心',
+                    '时尚趋势占领社交媒体',
+                    '旅游目的地一夜爆红',
+                    '健身挑战激励数百万人',
+                    '烹饪教程打破记录',
+                    '科技评测走红'
+                ];
+
+                return trends.map((title, index) => ({
+                    title: title,
+                    titleZh: trendsZh[index],
+                    engagement: (Math.random() * 4 + 1).toFixed(1) + 'M',
+                    time: Math.floor(Math.random() * 10 + 1) + '小时前',
+                    url: `https://tiktok.com/trending/${index + 1}`,
+                    platform: 'tiktok'
+                }));
+            }
+
+            // 模拟获取微博数据
+            async getWeiboNews() {
+                const hotTopics = [
+                    '娱乐圈重磅消息引发关注',
+                    '社会热点事件持续发酵',
+                    '体育赛事精彩瞬间回顾',
+                    '科技新品发布备受期待',
+                    '美食探店视频走红网络'
+                ];
+
+                return hotTopics.map((title, index) => ({
+                    title: title,
+                    titleZh: title,
+                    engagement: Math.floor(Math.random() * 400 + 100) + 'K',
+                    time: Math.floor(Math.random() * 4 + 1) + '小时前',
+                    url: `https://weibo.com/hot/${index + 1}`,
+                    platform: 'weibo'
+                }));
+            }
+
+            // 模拟获取Reddit数据
+            async getRedditNews() {
+                const posts = [
+                    'AskReddit: What\'s your best life hack?',
+                    'Gaming community discovers new strategy',
+                    'Science explanation goes viral',
+                    'Programming tip saves developers hours',
+                    'Movie theory blows minds'
+                ];
+                
+                const postsZh = [
+                    '提问：你最好的生活技巧是什么？',
+                    '游戏社区发现新策略',
+                    '科学解释走红',
+                    '编程技巧为开发者节省数小时',
+                    '电影理论让人大开眼界'
+                ];
+
+                return posts.map((title, index) => ({
+                    title: title,
+                    titleZh: postsZh[index],
+                    engagement: Math.floor(Math.random() * 20 + 5) + 'K',
+                    time: Math.floor(Math.random() * 6 + 2) + '小时前',
+                    url: `https://reddit.com/r/AskReddit/${index + 1}`,
+                    platform: 'reddit'
+                }));
+            }
+
+            // 获取所有新闻
+            async getAllNews() {
+                const newsData = {};
+                newsData.twitter = await this.getTwitterNews();
+                newsData.tiktok = await this.getTiktokNews();
+                newsData.weibo = await this.getWeiboNews();
+                newsData.reddit = await this.getRedditNews();
+                return newsData;
+            }
+        }
+
+        // UI管理器
+        class UIManager {
+            constructor() {
+                this.newsManager = new NewsManager();
+                this.isLoading = false;
+            }
+
+            showLoading() {
+                const loading = document.getElementById('loading');
+                const container = document.getElementById('newsContainer');
+                
+                loading.classList.remove('hidden');
+                container.classList.add('hidden');
+                this.isLoading = true;
+            }
+
+            hideLoading() {
+                const loading = document.getElementById('loading');
+                const container = document.getElementById('newsContainer');
+                
+                loading.classList.add('hidden');
+                container.classList.remove('hidden');
+                this.isLoading = false;
+            }
+
+            renderNewsCard(news) {
+                const badges = {
+                    twitter: 'twitter-badge',
+                    tiktok: 'tiktok-badge',
+                    weibo: 'weibo-badge',
+                    reddit: 'reddit-badge'
+                };
+
+                const icons = {
+                    twitter: 'ri-twitter-x-line',
+                    tiktok: 'ri-tiktok-line',
+                    weibo: 'ri-weibo-line',
+                    reddit: 'ri-reddit-line'
+                };
+
+                return `
+                    <div class="news-card bg-gray-50 rounded-lg p-4 hover:bg-gray-100 cursor-pointer" data-url="${news.url}">
+                        <div class="flex justify-between items-start mb-2">
+                            <div class="flex items-center">
+                                <i class="${icons[news.platform]} text-lg mr-2"></i>
+                                <span class="platform-badge ${badges[news.platform]}">${news.platform}</span>
+                            </div>
+                            <span class="text-xs text-gray-500">${news.time}</span>
+                        </div>
+                        <h3 class="font-medium text-gray-900 mb-1">${news.title}</h3>
+                        <h3 class="font-medium text-gray-700 mb-2">${news.titleZh}</h3>
+                        <div class="flex justify-between items-center">
+                            <span class="text-sm text-gray-500">
+                                <i class="ri-fire-line text-orange-500 mr-1"></i>
+                                ${news.engagement} 互动
+                            </span>
+                            <i class="ri-external-link-line text-blue-500"></i>
+                        </div>
+                    </div>
+                `;
+            }
+
+            renderPlatformNews(platform, news) {
+                const container = document.getElementById(`${platform}News`);
+                if (!container) return;
+
+                const displayNews = platform === 'tiktok' ? news.slice(0, 10) : news;
+                container.innerHTML = displayNews.map(item => this.renderNewsCard(item)).join('');
+            }
+
+            updateLastUpdateTime() {
+                const now = new Date();
+                const timeString = now.toLocaleString('zh-CN');
+                const element = document.getElementById('lastUpdate');
+                if (element) {
+                    element.textContent = `最后更新: ${timeString}`;
+                }
+            }
+
+            async loadAndDisplayNews() {
+                if (this.isLoading) return;
+
+                this.showLoading();
+
+                try {
+                    const newsData = await this.newsManager.getAllNews();
+
+                    this.renderPlatformNews('twitter', newsData.twitter || []);
+                    this.renderPlatformNews('tiktok', newsData.tiktok || []);
+                    this.renderPlatformNews('weibo', newsData.weibo || []);
+                    this.renderPlatformNews('reddit', newsData.reddit || []);
+
+                    this.updateLastUpdateTime();
+
+                } catch (error) {
+                    console.error('加载新闻失败:', error);
+                } finally {
+                    this.hideLoading();
+                }
+            }
+
+            async refreshNews() {
+                await this.loadAndDisplayNews();
+            }
+
+            init() {
+                this.loadAndDisplayNews();
+
+                setInterval(() => {
+                    this.loadAndDisplayNews();
+                }, 30 * 60 * 1000); // 30分钟
+
+                document.addEventListener('click', (e) => {
+                    const newsCard = e.target.closest('.news-card');
+                    if (newsCard) {
+                        const url = newsCard.dataset.url;
+                        if (url) {
+                            window.open(url, '_blank');
+                        }
+                    }
+                });
+            }
+        }
+
+        // 页面加载完成后初始化
+        document.addEventListener('DOMContentLoaded', function() {
+            const uiManager = new UIManager();
+            uiManager.init();
+            window.refreshNews = () => uiManager.refreshNews();
+        });
+    </script>
 </body>
 </html>
