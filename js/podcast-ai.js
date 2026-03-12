@@ -10,7 +10,7 @@
 // ─────────────────────────────────────────────
 const App = {
   apiKey:  localStorage.getItem('pc_api_key') || '',
-  model:   localStorage.getItem('pc_model')   || 'claude-opus-4-6',
+  model:   localStorage.getItem('pc_model')   || 'glm-4-plus',
   lang:    localStorage.getItem('pc_lang')    || 'zh-CN',
 
   isPlaying:    false,
@@ -50,8 +50,8 @@ window.addEventListener('DOMContentLoaded', () => {
 // ─────────────────────────────────────────────
 function saveApiKey() {
   const key = id('apiKeyInput').value.trim();
-  if (!key.startsWith('sk-ant-')) {
-    toast('请输入有效的 Claude API Key（以 sk-ant- 开头）', 'error');
+  if (!key) {
+    toast('请输入 API Key', 'error');
     return;
   }
   App.apiKey = key;
@@ -92,9 +92,10 @@ function saveSettings() {
 
 function updateModelBadge() {
   const labels = {
-    'claude-opus-4-6':   'Opus 4.6',
-    'claude-sonnet-4-6': 'Sonnet 4.6',
-    'claude-haiku-4-5':  'Haiku 4.5',
+    'glm-4-plus': 'GLM-4-Plus',
+    'glm-4-flash': 'GLM-4-Flash',
+    'glm-4-air':  'GLM-4-Air',
+    'glm-4-long': 'GLM-4-Long',
   };
   id('modelBadge').textContent = labels[App.model] || App.model;
 }
@@ -140,7 +141,12 @@ function initPlayer() {
   });
 
   audio.addEventListener('error', () => {
-    toast('音频加载失败，请检查 URL 或文件格式', 'error');
+    const err = audio.error;
+    if (err && err.code === MediaError.MEDIA_ERR_SRC_NOT_SUPPORTED) {
+      toast('音频加载失败：该地址不支持跨域访问 (CORS)，请尝试本地文件', 'error');
+    } else {
+      toast('音频加载失败，请检查 URL 或文件格式', 'error');
+    }
   });
 }
 
@@ -163,6 +169,14 @@ function loadSample(url, name) {
 
 function loadAudio(src, name) {
   const audio = id('audio');
+
+  // Blob URLs are same-origin; remote URLs need CORS so Web Audio API can route audio
+  if (src.startsWith('blob:')) {
+    audio.removeAttribute('crossOrigin');
+  } else {
+    audio.crossOrigin = 'anonymous';
+  }
+
   audio.src = src;
   audio.load();
 
@@ -174,14 +188,18 @@ function loadAudio(src, name) {
   addMsg('ai', `🎙️ 已加载：**${title}**\n\n点击播放开始，随时可以提问！`);
 }
 
-function togglePlay() {
+async function togglePlay() {
   const audio = id('audio');
   if (!audio.src) { toast('请先加载播客', 'warning'); return; }
+  if (App.audioCtx && App.audioCtx.state === 'suspended') {
+    await App.audioCtx.resume();
+  }
   audio.paused ? audio.play() : audio.pause();
 }
 
 function skip(sec) {
   const a = id('audio');
+  if (App.audioCtx && App.audioCtx.state === 'suspended') App.audioCtx.resume();
   a.currentTime = Math.max(0, Math.min(a.duration || 0, a.currentTime + sec));
 }
 
@@ -340,8 +358,12 @@ function stopListening() {
   id('interimText').textContent = '';
 }
 
-function resumeIfNeeded() {
-  if (App.wasPlaying) id('audio').play();
+async function resumeIfNeeded() {
+  if (!App.wasPlaying) return;
+  if (App.audioCtx && App.audioCtx.state === 'suspended') {
+    await App.audioCtx.resume();
+  }
+  id('audio').play();
 }
 
 // ─────────────────────────────────────────────
@@ -411,12 +433,22 @@ ${context}
     await streamClaude(systemPrompt, question, thinkEl);
   } catch (err) {
     removeEl(thinkEl);
-    addMsg('ai', `❌ 请求失败：${err.message}\n\n请检查 API Key 是否正确，或网络连接是否正常。`);
+    const msg = err.message || '';
+    let hint = '请检查 API Key 是否正确，或网络连接是否正常。';
+    if (msg.includes('balance') || msg.includes('quota') || msg.includes('insufficient')) {
+      hint = '账户余额不足，请前往 [open.bigmodel.cn](https://open.bigmodel.cn) 充值。';
+    } else if (msg.includes('401') || msg.includes('invalid') || msg.includes('Authentication') || msg.includes('Unauthorized')) {
+      hint = 'API Key 无效，请在设置中重新填写。';
+    } else if (msg.includes('429') || msg.includes('rate limit')) {
+      hint = '请求过于频繁，请稍后再试。';
+    }
+    addMsg('ai', `❌ 请求失败：${msg}\n\n${hint}`);
   } finally {
     App.isThinking = false;
     // 自动继续播放
-    setTimeout(() => {
+    setTimeout(async () => {
       if (App.wasPlaying) {
+        if (App.audioCtx && App.audioCtx.state === 'suspended') await App.audioCtx.resume();
         id('audio').play();
         setStatus('AI 全程同步收听中', true);
       } else {
@@ -427,23 +459,22 @@ ${context}
 }
 
 // ─────────────────────────────────────────────
-// Claude API 流式调用（SSE）
+// 智谱 AI 流式调用（SSE，OpenAI 兼容格式）
 // ─────────────────────────────────────────────
 async function streamClaude(system, question, thinkEl) {
-  const resp = await fetch('https://api.anthropic.com/v1/messages', {
+  const resp = await fetch('https://open.bigmodel.cn/api/paas/v4/chat/completions', {
     method: 'POST',
     headers: {
       'Content-Type':  'application/json',
-      'x-api-key':     App.apiKey,
-      'anthropic-version': '2023-06-01',
-      'anthropic-dangerous-direct-browser-access': 'true',
+      'Authorization': `Bearer ${App.apiKey}`,
     },
     body: JSON.stringify({
-      model:      App.model,
-      max_tokens: 1024,
-      stream:     true,
-      system:     system,
-      messages:   [{ role: 'user', content: question }],
+      model:    App.model,
+      stream:   true,
+      messages: [
+        { role: 'system', content: system },
+        { role: 'user',   content: question },
+      ],
     }),
   });
 
@@ -477,11 +508,12 @@ async function streamClaude(system, question, thinkEl) {
     for (const line of lines) {
       if (!line.startsWith('data: ')) continue;
       const raw = line.slice(6).trim();
-      if (raw === '[DONE]') continue;
+      if (raw === '[DONE]') break;
       try {
         const ev = JSON.parse(raw);
-        if (ev.type === 'content_block_delta' && ev.delta?.type === 'text_delta') {
-          full += ev.delta.text;
+        const delta = ev.choices?.[0]?.delta?.content;
+        if (delta) {
+          full += delta;
           renderMd(msgEl, full);
           scrollChat();
         }
