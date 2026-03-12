@@ -50,8 +50,8 @@ window.addEventListener('DOMContentLoaded', () => {
 // ─────────────────────────────────────────────
 function saveApiKey() {
   const key = id('apiKeyInput').value.trim();
-  if (!key.startsWith('sk-ant-')) {
-    toast('请输入有效的 Claude API Key（以 sk-ant- 开头）', 'error');
+  if (!key) {
+    toast('请输入 API Key', 'error');
     return;
   }
   App.apiKey = key;
