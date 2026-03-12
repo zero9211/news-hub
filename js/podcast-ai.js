@@ -18,10 +18,15 @@ const App = {
   isListening:  false,
   isThinking:   false,
 
-  audioCtx:     null,
-  analyser:     null,
-  waveRaf:      null,
-  recognition:  null,
+  audioCtx:       null,
+  analyser:       null,
+  waveRaf:        null,
+  recognition:    null,
+
+  // 音频捕获（用于实时转录）
+  mediaStreamDest: null,
+  mediaRecorder:   null,
+  audioChunks:     [],   // { blob, ts } 滚动缓冲，保留最近 60 秒
 };
 
 // ─────────────────────────────────────────────
@@ -214,6 +219,25 @@ function setSpeed(v) {
   id('audio').playbackRate = parseFloat(v);
 }
 
+// "听懂这句" 按钮：转录当前播放内容后直接问 AI
+async function transcribeAndAsk() {
+  if (!App.mediaRecorder) { toast('请先加载并播放音频', 'warning'); return; }
+  if (!App.apiKey) { showApiModal(); return; }
+  setStatus('正在识别音频内容...', true);
+  const transcript = await transcribeRecentAudio(10);
+  if (!transcript) {
+    toast('识别失败，请播放一段后再试', 'error');
+    setStatus('就绪', false);
+    return;
+  }
+  // 将转录文本填入输入框，用户可直接发送或追加问题
+  const inp = id('textQ');
+  inp.value = transcript;
+  inp.focus();
+  toast('识别完成，可直接发送或补充问题', 'success');
+  setStatus('就绪', false);
+}
+
 function fmt(s) {
   if (!s || isNaN(s)) return '0:00';
   const m = Math.floor(s / 60), sec = Math.floor(s % 60);
@@ -235,10 +259,99 @@ function initWaveform() {
       const src = App.audioCtx.createMediaElementSource(audio);
       src.connect(App.analyser);
       App.analyser.connect(App.audioCtx.destination);
+      setupAudioCapture();
     }
     drawWaveform(canvas);
   } catch (e) {
     drawStaticBars(canvas);
+  }
+}
+
+// ─────────────────────────────────────────────
+// 音频捕获 & 转录
+// ─────────────────────────────────────────────
+function setupAudioCapture() {
+  if (!App.audioCtx || !App.analyser || App.mediaRecorder) return;
+  try {
+    App.mediaStreamDest = App.audioCtx.createMediaStreamDestination();
+    App.analyser.connect(App.mediaStreamDest);
+
+    const mime = ['audio/webm;codecs=opus', 'audio/webm', 'audio/ogg']
+      .find(t => MediaRecorder.isTypeSupported(t)) || '';
+    App.mediaRecorder = new MediaRecorder(
+      App.mediaStreamDest.stream,
+      mime ? { mimeType: mime } : {}
+    );
+    App.audioChunks = [];
+    App.mediaRecorder.ondataavailable = ({ data }) => {
+      if (data.size > 0) {
+        App.audioChunks.push({ blob: data, ts: Date.now() });
+        const cutoff = Date.now() - 60000;
+        App.audioChunks = App.audioChunks.filter(c => c.ts > cutoff);
+      }
+    };
+    App.mediaRecorder.start(1000); // 每秒一个 chunk
+  } catch (e) {
+    console.warn('Audio capture unavailable:', e);
+  }
+}
+
+function getRecentAudioBlob(seconds = 10) {
+  const cutoff = Date.now() - seconds * 1000;
+  const chunks = App.audioChunks.filter(c => c.ts > cutoff).map(c => c.blob);
+  if (!chunks.length) return null;
+  return new Blob(chunks, { type: chunks[0].type || 'audio/webm' });
+}
+
+async function blobToWav(blob) {
+  const ab = await blob.arrayBuffer();
+  const decoded = await App.audioCtx.decodeAudioData(ab);
+  const sr = 16000;
+  const offCtx = new OfflineAudioContext(1, Math.ceil(sr * decoded.duration), sr);
+  const src = offCtx.createBufferSource();
+  src.buffer = decoded;
+  src.connect(offCtx.destination);
+  src.start();
+  const rendered = await offCtx.startRendering();
+  return encodeWAV(rendered.getChannelData(0), sr);
+}
+
+function encodeWAV(samples, sr) {
+  const buf = new ArrayBuffer(44 + samples.length * 2);
+  const v = new DataView(buf);
+  const ws = (o, s) => [...s].forEach((c, i) => v.setUint8(o + i, c.charCodeAt(0)));
+  ws(0, 'RIFF'); v.setUint32(4, 36 + samples.length * 2, true);
+  ws(8, 'WAVE'); ws(12, 'fmt '); v.setUint32(16, 16, true);
+  v.setUint16(20, 1, true); v.setUint16(22, 1, true);
+  v.setUint32(24, sr, true); v.setUint32(28, sr * 2, true);
+  v.setUint16(32, 2, true); v.setUint16(34, 16, true);
+  ws(36, 'data'); v.setUint32(40, samples.length * 2, true);
+  for (let i = 0; i < samples.length; i++) {
+    const s = Math.max(-1, Math.min(1, samples[i]));
+    v.setInt16(44 + i * 2, s < 0 ? s * 0x8000 : s * 0x7FFF, true);
+  }
+  return new Blob([buf], { type: 'audio/wav' });
+}
+
+async function transcribeRecentAudio(seconds = 10) {
+  const blob = getRecentAudioBlob(seconds);
+  if (!blob) return null;
+  try {
+    const wav = await blobToWav(blob);
+    const fd = new FormData();
+    fd.append('file', wav, 'audio.wav');
+    fd.append('model', 'glm-asr-2512');
+    fd.append('stream', 'false');
+    const resp = await fetch('https://open.bigmodel.cn/api/paas/v4/audio/transcriptions', {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${App.apiKey}` },
+      body: fd,
+    });
+    if (!resp.ok) return null;
+    const data = await resp.json();
+    return data.text || null;
+  } catch {
+    return null;
   }
 }
 
@@ -399,6 +512,14 @@ async function sendQuestion(question) {
   let context = `播客：${title}\n播放位置：${ts} / ${duration}`;
   if (ctx) context += `\n\n播客内容/字幕：\n${ctx}`;
 
+  // 若问题涉及"当前/这句/刚才"，自动转录最近 10 秒
+  const needsTranscript = /这句|那句|刚才|当前|现在说|重复|repeat|just said|what.*said/i.test(question);
+  if (needsTranscript && App.mediaRecorder) {
+    setStatus('正在识别音频内容...', true);
+    const transcript = await transcribeRecentAudio(10);
+    if (transcript) context += `\n\n当前正在播放的内容（AI自动识别）：\n"${transcript}"`;
+  }
+
   const systemPrompt = `你是专业的AI播客伴侣，正与用户一起实时收听播客。
 你拥有以下能力：
 1. **单词讲解**：词义、音标（IPA）、例句、连读/弱读规则
@@ -422,7 +543,8 @@ ${context}
 - 语言：中文为主，英语术语保留原文
 
 重要规则：
-- 若用户说"这句话""这个词""刚才那句"等但未提供具体内容，必须先回复："请把你想问的那句话或单词粘贴/输入进来，我来帮你分析 🎧"，不要猜测或编造内容。
+- 若上下文中有"当前正在播放的内容（AI自动识别）"，则直接基于该内容回答，无需用户再重复。
+- 若用户说"这句话""这个词""刚才那句"等，但上下文中没有识别内容，则回复："请把你想问的那句话或单词粘贴进来 🎧"。
 - 若用户提供了具体句子或单词，直接分析，无需再追问。`;
 
   // 显示用户消息
