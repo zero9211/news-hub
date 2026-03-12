@@ -432,7 +432,16 @@ ${context}
     await streamClaude(systemPrompt, question, thinkEl);
   } catch (err) {
     removeEl(thinkEl);
-    addMsg('ai', `❌ 请求失败：${err.message}\n\n请检查 API Key 是否正确，或网络连接是否正常。`);
+    const msg = err.message || '';
+    let hint = '请检查 API Key 是否正确，或网络连接是否正常。';
+    if (msg.includes('credit balance') || msg.includes('too low')) {
+      hint = '账户余额不足，请前往 [console.anthropic.com](https://console.anthropic.com) 充值。';
+    } else if (msg.includes('401') || msg.includes('invalid') || msg.includes('Authentication')) {
+      hint = 'API Key 无效，请在设置中重新填写。';
+    } else if (msg.includes('429') || msg.includes('rate limit')) {
+      hint = '请求过于频繁，请稍后再试。';
+    }
+    addMsg('ai', `❌ 请求失败：${msg}\n\n${hint}`);
   } finally {
     App.isThinking = false;
     // 自动继续播放
