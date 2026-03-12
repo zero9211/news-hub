@@ -143,11 +143,11 @@
                 <p style="color:var(--muted);font-size:13px;margin-top:2px;">AI Podcast Companion</p>
             </div>
         </div>
-        <p style="color:var(--muted);font-size:13px;line-height:1.7;margin-bottom:20px;">输入 Claude API Key 开始使用。Key 仅存储在本地浏览器，不会上传至任何服务器。</p>
-        <label style="font-size:13px;color:var(--muted);display:block;margin-bottom:6px;">Claude API Key</label>
-        <input class="inp" type="password" id="apiKeyInput" placeholder="sk-ant-api03-..." style="margin-bottom:12px;">
+        <p style="color:var(--muted);font-size:13px;line-height:1.7;margin-bottom:20px;">输入智谱 API Key 开始使用。Key 仅存储在本地浏览器，不会上传至任何服务器。</p>
+        <label style="font-size:13px;color:var(--muted);display:block;margin-bottom:6px;">智谱 API Key</label>
+        <input class="inp" type="password" id="apiKeyInput" placeholder="xxxxxxxx.xxxxxxxxxxxxxxxx" style="margin-bottom:12px;">
         <p style="font-size:12px;color:var(--muted);margin-bottom:20px;">
-            没有 API Key？<a href="https://console.anthropic.com" target="_blank" style="color:var(--accent);">前往 Anthropic Console 获取 →</a>
+            没有 API Key？<a href="https://open.bigmodel.cn" target="_blank" style="color:var(--accent);">前往智谱开放平台获取 →</a>
         </p>
         <button class="btn btn-primary" onclick="saveApiKey()" style="width:100%;padding:13px;font-size:15px;border-radius:12px;">
             <i class="ri-rocket-line"></i> 开始使用
@@ -162,13 +162,14 @@
             <h3 style="font-size:17px;font-weight:700;">⚙️ 设置</h3>
             <button onclick="closeSettings()" style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:22px;"><i class="ri-close-line"></i></button>
         </div>
-        <label style="font-size:13px;color:var(--muted);display:block;margin-bottom:6px;">Claude API Key</label>
-        <input class="inp" type="password" id="settingsKey" placeholder="sk-ant-api03-..." style="margin-bottom:16px;">
+        <label style="font-size:13px;color:var(--muted);display:block;margin-bottom:6px;">智谱 API Key</label>
+        <input class="inp" type="password" id="settingsKey" placeholder="xxxxxxxx.xxxxxxxxxxxxxxxx" style="margin-bottom:16px;">
         <label style="font-size:13px;color:var(--muted);display:block;margin-bottom:6px;">AI 模型</label>
         <select class="inp" id="modelSel" style="margin-bottom:16px;">
-            <option value="claude-opus-4-6">Claude Opus 4.6 — 最强推理 (推荐)</option>
-            <option value="claude-sonnet-4-6">Claude Sonnet 4.6 — 速度均衡</option>
-            <option value="claude-haiku-4-5">Claude Haiku 4.5 — 最快响应</option>
+            <option value="glm-4-plus">GLM-4-Plus — 最强推理 (推荐)</option>
+            <option value="glm-4-flash">GLM-4-Flash — 极速响应 · 免费</option>
+            <option value="glm-4-air">GLM-4-Air — 速度均衡</option>
+            <option value="glm-4-long">GLM-4-Long — 超长上下文</option>
         </select>
         <label style="font-size:13px;color:var(--muted);display:block;margin-bottom:6px;">语音识别语言</label>
         <select class="inp" id="langSel" style="margin-bottom:20px;">

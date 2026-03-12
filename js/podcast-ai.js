@@ -10,7 +10,7 @@
 // ─────────────────────────────────────────────
 const App = {
   apiKey:  localStorage.getItem('pc_api_key') || '',
-  model:   localStorage.getItem('pc_model')   || 'claude-opus-4-6',
+  model:   localStorage.getItem('pc_model')   || 'glm-4-plus',
   lang:    localStorage.getItem('pc_lang')    || 'zh-CN',
 
   isPlaying:    false,
@@ -92,9 +92,10 @@ function saveSettings() {
 
 function updateModelBadge() {
   const labels = {
-    'claude-opus-4-6':   'Opus 4.6',
-    'claude-sonnet-4-6': 'Sonnet 4.6',
-    'claude-haiku-4-5':  'Haiku 4.5',
+    'glm-4-plus': 'GLM-4-Plus',
+    'glm-4-flash': 'GLM-4-Flash',
+    'glm-4-air':  'GLM-4-Air',
+    'glm-4-long': 'GLM-4-Long',
   };
   id('modelBadge').textContent = labels[App.model] || App.model;
 }
@@ -434,9 +435,9 @@ ${context}
     removeEl(thinkEl);
     const msg = err.message || '';
     let hint = '请检查 API Key 是否正确，或网络连接是否正常。';
-    if (msg.includes('credit balance') || msg.includes('too low')) {
-      hint = '账户余额不足，请前往 [console.anthropic.com](https://console.anthropic.com) 充值。';
-    } else if (msg.includes('401') || msg.includes('invalid') || msg.includes('Authentication')) {
+    if (msg.includes('balance') || msg.includes('quota') || msg.includes('insufficient')) {
+      hint = '账户余额不足，请前往 [open.bigmodel.cn](https://open.bigmodel.cn) 充值。';
+    } else if (msg.includes('401') || msg.includes('invalid') || msg.includes('Authentication') || msg.includes('Unauthorized')) {
       hint = 'API Key 无效，请在设置中重新填写。';
     } else if (msg.includes('429') || msg.includes('rate limit')) {
       hint = '请求过于频繁，请稍后再试。';
@@ -458,23 +459,22 @@ ${context}
 }
 
 // ─────────────────────────────────────────────
-// Claude API 流式调用（SSE）
+// 智谱 AI 流式调用（SSE，OpenAI 兼容格式）
 // ─────────────────────────────────────────────
 async function streamClaude(system, question, thinkEl) {
-  const resp = await fetch('https://api.anthropic.com/v1/messages', {
+  const resp = await fetch('https://open.bigmodel.cn/api/paas/v4/chat/completions', {
     method: 'POST',
     headers: {
       'Content-Type':  'application/json',
-      'x-api-key':     App.apiKey,
-      'anthropic-version': '2023-06-01',
-      'anthropic-dangerous-direct-browser-access': 'true',
+      'Authorization': `Bearer ${App.apiKey}`,
     },
     body: JSON.stringify({
-      model:      App.model,
-      max_tokens: 1024,
-      stream:     true,
-      system:     system,
-      messages:   [{ role: 'user', content: question }],
+      model:    App.model,
+      stream:   true,
+      messages: [
+        { role: 'system', content: system },
+        { role: 'user',   content: question },
+      ],
     }),
   });
 
@@ -508,11 +508,12 @@ async function streamClaude(system, question, thinkEl) {
     for (const line of lines) {
       if (!line.startsWith('data: ')) continue;
       const raw = line.slice(6).trim();
-      if (raw === '[DONE]') continue;
+      if (raw === '[DONE]') break;
       try {
         const ev = JSON.parse(raw);
-        if (ev.type === 'content_block_delta' && ev.delta?.type === 'text_delta') {
-          full += ev.delta.text;
+        const delta = ev.choices?.[0]?.delta?.content;
+        if (delta) {
+          full += delta;
           renderMd(msgEl, full);
           scrollChat();
         }
