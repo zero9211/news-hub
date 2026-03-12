@@ -140,7 +140,12 @@ function initPlayer() {
   });
 
   audio.addEventListener('error', () => {
-    toast('音频加载失败，请检查 URL 或文件格式', 'error');
+    const err = audio.error;
+    if (err && err.code === MediaError.MEDIA_ERR_SRC_NOT_SUPPORTED) {
+      toast('音频加载失败：该地址不支持跨域访问 (CORS)，请尝试本地文件', 'error');
+    } else {
+      toast('音频加载失败，请检查 URL 或文件格式', 'error');
+    }
   });
 }
 
@@ -163,6 +168,14 @@ function loadSample(url, name) {
 
 function loadAudio(src, name) {
   const audio = id('audio');
+
+  // Blob URLs are same-origin; remote URLs need CORS so Web Audio API can route audio
+  if (src.startsWith('blob:')) {
+    audio.removeAttribute('crossOrigin');
+  } else {
+    audio.crossOrigin = 'anonymous';
+  }
+
   audio.src = src;
   audio.load();
 
