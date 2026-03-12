@@ -177,11 +177,15 @@ function loadAudio(src, name) {
 function togglePlay() {
   const audio = id('audio');
   if (!audio.src) { toast('请先加载播客', 'warning'); return; }
+  if (App.audioCtx && App.audioCtx.state === 'suspended') {
+    App.audioCtx.resume();
+  }
   audio.paused ? audio.play() : audio.pause();
 }
 
 function skip(sec) {
   const a = id('audio');
+  if (App.audioCtx && App.audioCtx.state === 'suspended') App.audioCtx.resume();
   a.currentTime = Math.max(0, Math.min(a.duration || 0, a.currentTime + sec));
 }
 
