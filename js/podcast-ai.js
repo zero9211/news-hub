@@ -187,11 +187,11 @@ function loadAudio(src, name) {
   addMsg('ai', `🎙️ 已加载：**${title}**\n\n点击播放开始，随时可以提问！`);
 }
 
-function togglePlay() {
+async function togglePlay() {
   const audio = id('audio');
   if (!audio.src) { toast('请先加载播客', 'warning'); return; }
   if (App.audioCtx && App.audioCtx.state === 'suspended') {
-    App.audioCtx.resume();
+    await App.audioCtx.resume();
   }
   audio.paused ? audio.play() : audio.pause();
 }
@@ -357,8 +357,12 @@ function stopListening() {
   id('interimText').textContent = '';
 }
 
-function resumeIfNeeded() {
-  if (App.wasPlaying) id('audio').play();
+async function resumeIfNeeded() {
+  if (!App.wasPlaying) return;
+  if (App.audioCtx && App.audioCtx.state === 'suspended') {
+    await App.audioCtx.resume();
+  }
+  id('audio').play();
 }
 
 // ─────────────────────────────────────────────
@@ -432,8 +436,9 @@ ${context}
   } finally {
     App.isThinking = false;
     // 自动继续播放
-    setTimeout(() => {
+    setTimeout(async () => {
       if (App.wasPlaying) {
+        if (App.audioCtx && App.audioCtx.state === 'suspended') await App.audioCtx.resume();
         id('audio').play();
         setStatus('AI 全程同步收听中', true);
       } else {
