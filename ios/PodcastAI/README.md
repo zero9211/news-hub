@@ -74,4 +74,4 @@ PodcastAIApp
 - iOS 17.0+
 - Xcode 15+
 - 真机测试（模拟器无麦克风）
-- Apple Developer Account（用于真机签名）
+- Apple Developer Account（用于真机签名，侧载可用 LiveContainer）
