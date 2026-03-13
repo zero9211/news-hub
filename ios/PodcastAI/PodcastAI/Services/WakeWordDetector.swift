@@ -52,6 +52,7 @@ final class WakeWordDetector {
         recognitionRequest = SFSpeechAudioBufferRecognitionRequest()
         guard let request = recognitionRequest else { return }
         request.shouldReportPartialResults = true
+        request.requiresOnDeviceRecognition = true
 
         recognitionTask = recognizer?.recognitionTask(with: request) { [weak self] result, error in
             guard let self else { return }
