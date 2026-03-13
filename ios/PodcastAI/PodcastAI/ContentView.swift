@@ -124,7 +124,7 @@ struct ContentView: View {
                     showPermissionAlert = true
                     return
                 }
-                AVAudioApplication.requestRecordPermission { granted in
+                AVAudioSession.sharedInstance().requestRecordPermission { granted in
                     DispatchQueue.main.async {
                         permissionsGranted = granted
                         if !granted { showPermissionAlert = true }
