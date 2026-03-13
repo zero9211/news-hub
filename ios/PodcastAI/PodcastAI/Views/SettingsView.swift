@@ -28,7 +28,7 @@ struct SettingsView: View {
                 } header: {
                     Text("唤醒词")
                 } footer: {
-                    Text("说出唤醒词即可免手动开始对话，例如"小艾"或"嘿小艾"")
+                    Text("说出唤醒词即可免手动开始对话，例如「小艾」或「嘿小艾」")
                 }
 
                 // Language
