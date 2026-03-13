@@ -32,7 +32,7 @@ jobs:
         working-directory: ios/PodcastAI
         run: xcodebuild -project PodcastAI.xcodeproj -list
 
-      - name: Build (unsigned)
+      - name: Build (ad-hoc signed)
         working-directory: ios/PodcastAI
         run: |
           xcodebuild \
@@ -41,10 +41,12 @@ jobs:
             -configuration Release \
             -sdk iphoneos \
             -destination generic/platform=iOS \
-            CODE_SIGN_IDENTITY="" \
-            CODE_SIGNING_REQUIRED=NO \
-            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGN_IDENTITY="-" \
+            CODE_SIGNING_REQUIRED=YES \
+            CODE_SIGNING_ALLOWED=YES \
+            AD_HOC_CODE_SIGNING_ALLOWED=YES \
             DEVELOPMENT_TEAM="" \
+            PROVISIONING_PROFILE_SPECIFIER="" \
             ONLY_ACTIVE_ARCH=NO \
             SKIP_INSTALL=NO \
             CONFIGURATION_BUILD_DIR="$PWD/build_output" \
