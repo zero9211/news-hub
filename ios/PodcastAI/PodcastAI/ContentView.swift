@@ -1,5 +1,6 @@
-import SwiftUI
+import AVFoundation
 import Speech
+import SwiftUI
 
 struct ContentView: View {
     @Environment(AppState.self) private var state
