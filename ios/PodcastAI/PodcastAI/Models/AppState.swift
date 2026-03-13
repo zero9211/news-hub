@@ -25,7 +25,7 @@ class AppState {
 
     init() {
         apiKey     = UserDefaults.standard.string(forKey: "pc_api_key")     ?? ""
-        wakeWord   = UserDefaults.standard.string(forKey: "pc_wake_word")   ?? "小艾"
+        wakeWord   = UserDefaults.standard.string(forKey: "pc_wake_word")   ?? "小爱"
         userLang   = UserDefaults.standard.string(forKey: "pc_user_lang")   ?? "zh-CN"
         podcastLang = UserDefaults.standard.string(forKey: "pc_podcast_lang") ?? "en-US"
     }

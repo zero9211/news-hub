@@ -56,7 +56,7 @@ final class WakeWordDetector {
         recognitionTask = recognizer?.recognitionTask(with: request) { [weak self] result, error in
             guard let self else { return }
             if let text = result?.bestTranscription.formattedString,
-               text.contains(self.wakeWord) {
+               self.textContainsWakeWord(text) {
                 self.handleDetection()
                 return
             }
@@ -81,6 +81,21 @@ final class WakeWordDetector {
         recognitionTask = nil
         recognitionRequest?.endAudio()
         recognitionRequest = nil
+    }
+
+    /// Check the ASR text against the configured wake word and common
+    /// homophone variants that SFSpeechRecognizer may produce instead.
+    private func textContainsWakeWord(_ text: String) -> Bool {
+        // Always check the exact configured word first.
+        if text.contains(wakeWord) { return true }
+        // "小爱" / "小艾" / "小哀" / "晓爱" are all pronounced "xiǎo ài".
+        // ASR can return any of them, so we match all variants when the
+        // configured word is one of them.
+        let xiaoAiVariants: Set<String> = ["小爱", "小艾", "小哀", "晓爱"]
+        if xiaoAiVariants.contains(wakeWord) {
+            return xiaoAiVariants.contains { text.contains($0) }
+        }
+        return false
     }
 
     private func handleDetection() {
