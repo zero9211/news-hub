@@ -24,8 +24,8 @@ final class AudioEngineManager {
         do {
             try session.setCategory(
                 .playAndRecord,
-                mode: .default,
-                options: [.defaultToSpeaker, .allowBluetooth, .mixWithOthers]
+                mode: .voiceChat,
+                options: [.defaultToSpeaker, .allowBluetooth]
             )
             try session.setActive(true)
         } catch {
