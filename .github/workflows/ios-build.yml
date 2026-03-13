@@ -1,0 +1,128 @@
+name: Build iOS IPA
+
+on:
+  push:
+    paths:
+      - 'ios/**'
+      - '.github/workflows/ios-build.yml'
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: macos-15
+    timeout-minutes: 30
+    permissions:
+      contents: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Show Xcode version
+        run: |
+          xcode-select -p
+          xcodebuild -version
+          xcrun --sdk iphoneos --show-sdk-version
+
+      - name: Install XcodeGen
+        run: brew install xcodegen
+
+      - name: Generate Xcode project
+        working-directory: ios/PodcastAI
+        run: xcodegen generate
+
+      - name: List schemes
+        working-directory: ios/PodcastAI
+        run: xcodebuild -project PodcastAI.xcodeproj -list
+
+      - name: Build (ad-hoc signed)
+        working-directory: ios/PodcastAI
+        run: |
+          xcodebuild \
+            -project PodcastAI.xcodeproj \
+            -scheme PodcastAI \
+            -configuration Release \
+            -sdk iphoneos \
+            -destination generic/platform=iOS \
+            CODE_SIGN_IDENTITY="-" \
+            CODE_SIGNING_REQUIRED=YES \
+            CODE_SIGNING_ALLOWED=YES \
+            AD_HOC_CODE_SIGNING_ALLOWED=YES \
+            DEVELOPMENT_TEAM="" \
+            PROVISIONING_PROFILE_SPECIFIER="" \
+            ONLY_ACTIVE_ARCH=NO \
+            SKIP_INSTALL=NO \
+            CONFIGURATION_BUILD_DIR="$PWD/build_output" \
+            clean build 2>&1 | tee xcodebuild.log || true
+
+      - name: Show Swift errors
+        if: always()
+        working-directory: ios/PodcastAI
+        run: |
+          echo "=== Swift errors ==="
+          grep -n "error:" xcodebuild.log | head -50 || echo "(no error: lines found)"
+          echo "=== Last 30 lines ==="
+          tail -30 xcodebuild.log
+
+      - name: Upload build log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: xcodebuild-log
+          path: ios/PodcastAI/xcodebuild.log
+          retention-days: 7
+
+      - name: Fail if build failed
+        working-directory: ios/PodcastAI
+        run: |
+          if grep -q "BUILD FAILED" xcodebuild.log; then
+            echo "❌ BUILD FAILED" && exit 1
+          fi
+
+      - name: Find .app
+        working-directory: ios/PodcastAI
+        run: find build_output -name "*.app" -type d
+
+      - name: Package IPA
+        working-directory: ios/PodcastAI
+        run: |
+          APP=$(find build_output -name "PodcastAI.app" -type d | head -1)
+          echo "Found app: $APP"
+          mkdir -p Payload
+          cp -r "$APP" Payload/
+          zip -r PodcastAI-unsigned.ipa Payload
+          rm -rf Payload
+
+      - name: Upload IPA artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: PodcastAI-unsigned-ipa
+          path: ios/PodcastAI/PodcastAI-unsigned.ipa
+          retention-days: 30
+
+      - name: Create versioned release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ios-build-${{ github.run_number }}
+          name: "PodcastAI IPA #${{ github.run_number }}"
+          body: "自动构建，仅供内部使用"
+          draft: false
+          prerelease: true
+          make_latest: false
+          files: ios/PodcastAI/PodcastAI-unsigned.ipa
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Update ios-latest release (fixed URL for OTA)
+        run: |
+          # Delete existing ios-latest tag and release (ignore errors if not exist)
+          gh release delete ios-latest --yes 2>/dev/null || true
+          git push origin :refs/tags/ios-latest 2>/dev/null || true
+          # Create new ios-latest release pointing to this build
+          gh release create ios-latest \
+            --title "PodcastAI Latest (build ${{ github.run_number }})" \
+            --notes "最新构建，一键安装用。Build #${{ github.run_number }}" \
+            --prerelease \
+            ios/PodcastAI/PodcastAI-unsigned.ipa
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
