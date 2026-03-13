@@ -145,8 +145,8 @@ final class VoiceCallSession {
         vad.monitorForInterrupt = false
         aiTranscript   = ""
         liveTranscript = ""
-        phase = .listening
-        vad.startRecording(language: userLang)
+        // Auto-end after one Q&A round; ContentView.onChange restarts wake detection.
+        endCall(sayFarewell: false)
     }
 
     // MARK: – AI call

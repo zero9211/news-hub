@@ -26,6 +26,11 @@ struct CallOverlayView: View {
                 PhaseIconView(phase: session.phase)
                     .frame(width: 120, height: 120)
 
+                // Status label
+                Text(statusLabel)
+                    .font(.subheadline)
+                    .foregroundStyle(.white.opacity(0.75))
+
                 // Live transcript
                 if !session.liveTranscript.isEmpty || !session.aiTranscript.isEmpty {
                     Text(session.phase == .speaking ? session.aiTranscript : session.liveTranscript)
@@ -37,11 +42,6 @@ struct CallOverlayView: View {
                         .transition(.opacity)
                         .animation(.easeInOut(duration: 0.3), value: session.liveTranscript + session.aiTranscript)
                 }
-
-                // Status label
-                Text(statusLabel)
-                    .font(.caption)
-                    .foregroundStyle(.white.opacity(0.6))
 
                 Spacer()
 
