@@ -5,7 +5,7 @@ on:
     paths:
       - 'ios/**'
       - '.github/workflows/ios-build.yml'
-  workflow_dispatch:  # 手动触发
+  workflow_dispatch:
 
 jobs:
   build:
@@ -15,8 +15,10 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Select Xcode 16
-        run: sudo xcode-select -s /Applications/Xcode_16.app/Contents/Developer
+      - name: Show Xcode version
+        run: |
+          xcode-select -p
+          xcodebuild -version
 
       - name: Install XcodeGen
         run: brew install xcodegen
@@ -28,24 +30,34 @@ jobs:
       - name: Build (unsigned)
         working-directory: ios/PodcastAI
         run: |
+          BUILD_DIR="$PWD/build_output"
+          mkdir -p "$BUILD_DIR"
+
           xcodebuild \
             -project PodcastAI.xcodeproj \
             -scheme PodcastAI \
             -configuration Release \
             -sdk iphoneos \
             -destination generic/platform=iOS \
-            CODE_SIGN_IDENTITY="" \
+            CODE_SIGN_IDENTITY="-" \
             CODE_SIGNING_REQUIRED=NO \
             CODE_SIGNING_ALLOWED=NO \
+            AD_HOC_CODE_SIGNING_ALLOWED=YES \
             DEVELOPMENT_TEAM="" \
-            clean build \
-            CONFIGURATION_BUILD_DIR=$PWD/build
+            SKIP_INSTALL=NO \
+            BUILD_DIR="$BUILD_DIR" \
+            clean build
+
+          echo "--- build output ---"
+          find "$BUILD_DIR" -name "*.app" | head -10
 
       - name: Package IPA
         working-directory: ios/PodcastAI
         run: |
+          APP=$(find build_output -name "PodcastAI.app" | head -1)
+          echo "Found app: $APP"
           mkdir -p Payload
-          cp -r build/PodcastAI.app Payload/
+          cp -r "$APP" Payload/
           zip -r PodcastAI-unsigned.ipa Payload
           rm -rf Payload
 
