@@ -37,7 +37,6 @@ jobs:
       - name: Build (ad-hoc signed)
         working-directory: ios/PodcastAI
         run: |
-          set -o pipefail
           xcodebuild \
             -project PodcastAI.xcodeproj \
             -scheme PodcastAI \
@@ -53,7 +52,28 @@ jobs:
             ONLY_ACTIVE_ARCH=NO \
             SKIP_INSTALL=NO \
             CONFIGURATION_BUILD_DIR="$PWD/build_output" \
-            clean build 2>&1 | tee xcodebuild.log
+            clean build 2>&1 | tee xcodebuild.log || true
+
+      - name: Show Swift errors
+        if: always()
+        working-directory: ios/PodcastAI
+        run: |
+          echo "=== Swift errors ==="
+          grep -n "error:" xcodebuild.log | head -50 || echo "(no error: lines found)"
+          echo "=== Last 30 lines ==="
+          tail -30 xcodebuild.log
+
+      - name: Upload build log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: xcodebuild-log
+          path: ios/PodcastAI/xcodebuild.log
+          retention-days: 7
+
+      - name: Fail if build failed
+        working-directory: ios/PodcastAI
+        run: |
           if grep -q "BUILD FAILED" xcodebuild.log; then
             echo "❌ BUILD FAILED" && exit 1
           fi
