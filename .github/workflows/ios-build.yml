@@ -19,6 +19,7 @@ jobs:
         run: |
           xcode-select -p
           xcodebuild -version
+          xcrun --sdk iphoneos --show-sdk-version
 
       - name: Install XcodeGen
         run: brew install xcodegen
@@ -27,34 +28,37 @@ jobs:
         working-directory: ios/PodcastAI
         run: xcodegen generate
 
+      - name: List schemes
+        working-directory: ios/PodcastAI
+        run: xcodebuild -project PodcastAI.xcodeproj -list
+
       - name: Build (unsigned)
         working-directory: ios/PodcastAI
         run: |
-          BUILD_DIR="$PWD/build_output"
-          mkdir -p "$BUILD_DIR"
-
           xcodebuild \
             -project PodcastAI.xcodeproj \
             -scheme PodcastAI \
             -configuration Release \
             -sdk iphoneos \
             -destination generic/platform=iOS \
-            CODE_SIGN_IDENTITY="-" \
+            CODE_SIGN_IDENTITY="" \
             CODE_SIGNING_REQUIRED=NO \
             CODE_SIGNING_ALLOWED=NO \
-            AD_HOC_CODE_SIGNING_ALLOWED=YES \
             DEVELOPMENT_TEAM="" \
+            ONLY_ACTIVE_ARCH=NO \
             SKIP_INSTALL=NO \
-            BUILD_DIR="$BUILD_DIR" \
-            clean build
+            CONFIGURATION_BUILD_DIR="$PWD/build_output" \
+            clean build \
+            2>&1 | tail -50
 
-          echo "--- build output ---"
-          find "$BUILD_DIR" -name "*.app" | head -10
+      - name: Find .app
+        working-directory: ios/PodcastAI
+        run: find build_output -name "*.app" -type d
 
       - name: Package IPA
         working-directory: ios/PodcastAI
         run: |
-          APP=$(find build_output -name "PodcastAI.app" | head -1)
+          APP=$(find build_output -name "PodcastAI.app" -type d | head -1)
           echo "Found app: $APP"
           mkdir -p Payload
           cp -r "$APP" Payload/
