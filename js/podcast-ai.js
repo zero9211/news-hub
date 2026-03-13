@@ -512,12 +512,26 @@ async function sendQuestion(question) {
   let context = `播客：${title}\n播放位置：${ts} / ${duration}`;
   if (ctx) context += `\n\n播客内容/字幕：\n${ctx}`;
 
-  // 若问题涉及"当前/这句/刚才"，自动转录最近 10 秒
-  const needsTranscript = /这句|那句|刚才|当前|现在说|重复|repeat|just said|what.*said/i.test(question);
-  if (needsTranscript && App.mediaRecorder) {
+  // 若问题涉及"当前/这句/刚才"或短问句如"是什么意思"，自动转录最近 10 秒
+  const isVague = /这句|那句|刚才|当前|现在说|重复|repeat|just said|what.*said/i.test(question)
+    || (question.replace(/[\s？?。，,.！!]/g, '').length <= 12 && /什么意思|怎么翻译|怎么说|是什么/.test(question));
+  if (isVague) {
+    if (!App.mediaRecorder) {
+      addMsg('user', question);
+      addMsg('ai', `🎧 当前无法自动识别音频内容（音频未初始化）。\n\n播放位置：**${ts}**\n\n请把你想问的那句话或单词**粘贴**进来~`);
+      await resumeIfNeeded();
+      return;
+    }
     setStatus('正在识别音频内容...', true);
     const transcript = await transcribeRecentAudio(10);
-    if (transcript) context += `\n\n当前正在播放的内容（AI自动识别）：\n"${transcript}"`;
+    if (transcript) {
+      context += `\n\n当前正在播放的内容（AI自动识别）：\n"${transcript}"`;
+    } else {
+      addMsg('user', question);
+      addMsg('ai', `🎧 音频识别失败（网络问题或音频刚开始播放，缓冲不足）。\n\n播放位置：**${ts}**\n\n请把你想问的那句话或单词**粘贴**进来~`);
+      await resumeIfNeeded();
+      return;
+    }
   }
 
   const systemPrompt = `你是专业的AI播客伴侣，正与用户一起实时收听播客。
