@@ -37,6 +37,7 @@ jobs:
       - name: Build (ad-hoc signed)
         working-directory: ios/PodcastAI
         run: |
+          set -o pipefail
           xcodebuild \
             -project PodcastAI.xcodeproj \
             -scheme PodcastAI \
@@ -52,8 +53,10 @@ jobs:
             ONLY_ACTIVE_ARCH=NO \
             SKIP_INSTALL=NO \
             CONFIGURATION_BUILD_DIR="$PWD/build_output" \
-            clean build \
-            2>&1 | tail -50
+            clean build 2>&1 | tee xcodebuild.log
+          if grep -q "BUILD FAILED" xcodebuild.log; then
+            echo "❌ BUILD FAILED" && exit 1
+          fi
 
       - name: Find .app
         working-directory: ios/PodcastAI
