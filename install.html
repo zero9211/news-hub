@@ -8,36 +8,26 @@
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body {
     font-family: -apple-system, sans-serif;
-    background: #000;
-    color: #fff;
+    background: #000; color: #fff;
     min-height: 100vh;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    padding: 32px 24px;
-    gap: 20px;
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    padding: 32px 24px; gap: 20px;
   }
   .icon { font-size: 64px; }
   h1 { font-size: 24px; font-weight: 700; }
   .sub { font-size: 15px; color: #888; text-align: center; line-height: 1.5; }
   .btn {
-    width: 100%;
-    max-width: 320px;
-    padding: 16px;
-    border-radius: 14px;
-    font-size: 17px;
-    font-weight: 600;
-    border: none;
-    cursor: pointer;
-    text-decoration: none;
-    text-align: center;
-    display: block;
+    width: 100%; max-width: 320px;
+    padding: 16px; border-radius: 14px;
+    font-size: 17px; font-weight: 600;
+    border: none; cursor: pointer;
+    text-decoration: none; text-align: center; display: block;
   }
-  #btn-lc  { background: #0a84ff; color: #fff; }
-  #btn-dl  { background: #1c1c1e; color: #0a84ff; font-size: 15px; padding: 12px; }
+  #btn-lc { background: #0a84ff; color: #fff; }
+  #btn-dl { background: #1c1c1e; color: #0a84ff; font-size: 15px; padding: 12px; }
   .btn:active { opacity: 0.75; }
-  #status { font-size: 13px; color: #555; text-align: center; min-height: 18px; }
+  #status { font-size: 13px; color: #555; text-align: center; }
 </style>
 </head>
 <body>
@@ -45,61 +35,39 @@
   <h1>PodcastAI</h1>
   <p class="sub" id="sub">正在获取最新版本…</p>
 
-  <button class="btn" id="btn-lc" disabled>一键安装到 LiveContainer</button>
-  <a    class="btn" id="btn-dl" href="#" style="display:none">仅下载 IPA 文件</a>
+  <a class="btn" id="btn-lc" href="#">一键安装到 LiveContainer</a>
+  <a class="btn" id="btn-dl" href="#" style="display:none">仅下载 IPA</a>
   <p id="status"></p>
 
   <script>
     const REPO  = 'zero9211/news-hub';
     const ASSET = 'PodcastAI-unsigned.ipa';
+    const IPA_URL = `https://github.com/${REPO}/releases/download/ios-latest/${ASSET}`;
+    const LC_URL  = 'livecontainer://install?url=' + encodeURIComponent(IPA_URL);
 
-    const btnLC  = document.getElementById('btn-lc');
-    const btnDL  = document.getElementById('btn-dl');
-    const sub    = document.getElementById('sub');
+    const btnLC = document.getElementById('btn-lc');
+    const btnDL = document.getElementById('btn-dl');
+    const sub   = document.getElementById('sub');
     const status = document.getElementById('status');
 
-    async function init() {
-      try {
-        const res = await fetch(
-          `https://api.github.com/repos/${REPO}/releases/tags/ios-latest`,
-          { headers: { Accept: 'application/vnd.github+json' } }
-        );
-        if (!res.ok) throw new Error('无法获取 Release（仓库可能是私有的）');
-        const data = await res.json();
-        const asset = data.assets?.find(a => a.name === ASSET);
-        if (!asset) throw new Error('未找到 IPA 文件，请先触发一次 CI 构建');
+    // 设置 LiveContainer 直接安装链接（固定 URL，不需要 API）
+    btnLC.href = LC_URL;
+    btnDL.href = IPA_URL;
+    btnDL.style.display = 'block';
+    btnDL.download = ASSET;
 
-        const ipaUrl   = asset.browser_download_url;
-        const buildNum = data.name?.match(/build (\d+)/)?.[1] ?? '';
-        const sizeMB   = (asset.size / 1024 / 1024).toFixed(1);
-
-        sub.textContent = buildNum ? `Build ${buildNum} · ${sizeMB} MB` : `${sizeMB} MB`;
-
-        // 一键安装：跳转到 LiveContainer 让它直接下载
-        btnLC.disabled = false;
-        btnLC.onclick = () => {
-          window.location.href =
-            'livecontainer://install?url=' + encodeURIComponent(ipaUrl);
-        };
-
-        // 备用：直接下载 IPA 文件
-        btnDL.href    = ipaUrl;
-        btnDL.download = ASSET;
-        btnDL.style.display = 'block';
-
-        status.textContent = '点「一键安装」会跳转到 LiveContainer 自动下载安装';
-      } catch (e) {
-        sub.textContent = '获取失败';
-        status.textContent = e.message;
-        // 降级：直接下载
-        const fallback = `https://github.com/${REPO}/releases/download/ios-latest/${ASSET}`;
-        btnLC.disabled = false;
-        btnLC.textContent = '下载 IPA';
-        btnLC.onclick = () => { window.location.href = fallback; };
-      }
-    }
-
-    init();
+    // 尝试从 API 获取 build 号和文件大小（可选，失败不影响安装）
+    fetch(`https://api.github.com/repos/${REPO}/releases/tags/ios-latest`,
+          { headers: { Accept: 'application/vnd.github+json' } })
+      .then(r => r.ok ? r.json() : null)
+      .then(data => {
+        if (!data) { sub.textContent = '点下方按钮安装'; return; }
+        const asset   = data.assets?.find(a => a.name === ASSET);
+        const build   = data.name?.match(/build (\d+)/)?.[1] ?? '';
+        const sizeMB  = asset ? (asset.size / 1024 / 1024).toFixed(1) + ' MB' : '';
+        sub.textContent = [build && `Build ${build}`, sizeMB].filter(Boolean).join(' · ');
+      })
+      .catch(() => { sub.textContent = '点下方按钮安装'; });
   </script>
 </body>
 </html>
