@@ -7,7 +7,7 @@ import Observation
 /// (podcast speaker bleed) for AI context. Headphone users will not benefit
 /// from audio capture — position-only context is used as fallback.
 @Observable
-final class PodcastPlayer: NSObject {
+final class PodcastPlayer {
 
     // ── Playback state ──────────────────────────────────────────────
     var isPlaying   = false
@@ -19,6 +19,7 @@ final class PodcastPlayer: NSObject {
     // ── Private ─────────────────────────────────────────────────────
     private var player: AVPlayer?
     private var timeObserver: Any?
+    private var endObserver: NSObjectProtocol?
 
     // Rolling ambient capture (mic records speaker bleed while playing)
     // Each chunk = one AVAudioRecorder file ≈ 10s
@@ -37,12 +38,13 @@ final class PodcastPlayer: NSObject {
         player = AVPlayer(playerItem: item)
 
         // Observe duration once loaded
-        NotificationCenter.default.addObserver(
-            self,
-            selector: #selector(playerItemDidReachEnd),
-            name: .AVPlayerItemDidPlayToEndTime,
-            object: item
-        )
+        endObserver = NotificationCenter.default.addObserver(
+            forName: .AVPlayerItemDidPlayToEndTime,
+            object: item,
+            queue: .main
+        ) { [weak self] _ in
+            self?.isPlaying = false
+        }
 
         Task {
             if let dur = try? await item.asset.load(.duration).seconds, dur.isFinite {
@@ -74,6 +76,8 @@ final class PodcastPlayer: NSObject {
     func stop() {
         pause()
         if let obs = timeObserver { player?.removeTimeObserver(obs) }
+        if let obs = endObserver { NotificationCenter.default.removeObserver(obs) }
+        endObserver = nil
         player = nil
         isLoaded = false
         currentTime = 0
@@ -160,7 +164,4 @@ final class PodcastPlayer: NSObject {
         return String(format: "%d:%02d", m, sec)
     }
 
-    @objc private func playerItemDidReachEnd() {
-        DispatchQueue.main.async { self.isPlaying = false }
-    }
 }
