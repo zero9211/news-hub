@@ -1,4 +1,4 @@
-name: PodcastAI
+name: PodcastAI # Build trigger
 options:
   bundleIdPrefix: com.podcastai
   deploymentTarget:
